@@ -5,7 +5,7 @@ import { beginPropertyChanges, endPropertyChanges } from './metal-property_event
 
 const {
   assert
-  } = Ember;
+} = Ember;
 
 /*
   Currently Backburner will pass in options we don't actually want
@@ -24,7 +24,7 @@ class BackburnerIgniter extends Igniter {
   }
 }
 
-var backburner = new BackburnerIgniter({
+let backburner = new BackburnerIgniter({
   GUID_KEY: GUID_KEY,
   sync: {
     before: beginPropertyChanges,
