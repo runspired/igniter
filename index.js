@@ -1,6 +1,12 @@
 /* jshint node: true */
+// jscs:disable
 'use strict';
 
 module.exports = {
-  name: 'igniter'
+  name: 'igniter',
+
+  isDevelopingAddon: function() {
+    return true;
+  }
+
 };

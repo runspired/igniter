@@ -1,26 +1,9 @@
 # Igniter
 
-This README outlines the details of collaborating on this Ember addon.
+[![npm version](https://badge.fury.io/js/igniter.svg)](http://badge.fury.io/js/igniter)
+[![Ember Observer Score](http://emberobserver.com/badges/igniter.svg)](http://emberobserver.com/addons/igniter)
+[![Build Status](https://travis-ci.org/runspired/igniter.svg)](https://travis-ci.org/runspired/igniter)
+[![Code Climate](https://codeclimate.com/github/runspired/igniter/badges/gpa.svg)](https://codeclimate.com/github/runspired/igniter)
 
-## Installation
+Intelligent Work Distribution for JavaScript Applications
 
-* `git clone` this repository
-* `npm install`
-* `bower install`
-
-## Running
-
-* `ember server`
-* Visit your app at http://localhost:4200.
-
-## Running Tests
-
-* `npm test` (Runs `ember try:testall` to test your addon against multiple Ember versions)
-* `ember test`
-* `ember test --server`
-
-## Building
-
-* `ember build`
-
-For more information on using ember-cli, visit [http://ember-cli.com/](http://ember-cli.com/).

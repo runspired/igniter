@@ -4,6 +4,16 @@ node_js:
   - "4"
 
 sudo: false
+dist: trusty
+
+addons:
+  code_climate:
+    repo_token: e3ad0bb7161f6cebc36d385ac707a4998535afa01ce157426571e3d0687e4f85
+  apt:
+    sources:
+    - google-chrome
+    packages:
+    - google-chrome-stable
 
 cache:
   directories:
@@ -22,15 +32,22 @@ matrix:
     - env: EMBER_TRY_SCENARIO=ember-canary
 
 before_install:
-  - npm config set spin false
-  - npm install -g bower
-  - npm install phantomjs-prebuilt
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - "npm install -g npm@^3"
+  - "npm config set progress false"
+  - "npm config set spin false"
+  - "npm install phantomjs-prebuilt"
+  - "npm install -g bower"
 
 install:
   - npm install
   - bower install
 
 script:
-  # Usually, it's ok to finish the test scenario without reverting
-  #  to the addon's original dependency state, skipping "cleanup".
   - ember try $EMBER_TRY_SCENARIO test --skip-cleanup
+
+branches:
+  only:
+    - master
+    - develop
