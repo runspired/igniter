@@ -62,6 +62,10 @@ export class Clock {
     return token;
   }
 
+  forget(token) {
+    token.cancelled = true;
+  }
+
   /*
     @method flush
 
