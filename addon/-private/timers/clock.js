@@ -1,16 +1,8 @@
 /* global Math */
 import { setTimeout, clearTimeout } from '../../-globals';
 import TimerArray from './timer-array';
-
+import Token from '../tokens';
 const now = Date.now;
-
-function clockTick() {
-  this._flush();
-}
-
-function Token() {
-  this.cancelled = false;
-}
 
 function wrapForTimer(work, token) {
   return function checkForCancelled() {
@@ -23,7 +15,7 @@ function wrapForTimer(work, token) {
 export class Clock {
   constructor() {
     this.timers = new TimerArray();
-    this.tick = clockTick.bind(this);
+    this.boundFlush = this._flush.bind(this);
     this.nextMacroTask = undefined;
   }
 
@@ -47,7 +39,7 @@ export class Clock {
     // push a new timeout if we don't have one
     if (this.timers.length === 0) {
       this.timers.push(executeAt, job);
-      this.nextMacroTask = setTimeout(this.tick, wait);
+      this.nextMacroTask = setTimeout(this.boundFlush, wait);
       return token;
     }
 
@@ -56,7 +48,7 @@ export class Clock {
     // we should be the new earliest timer
     if (insertionIndex === 0) {
       clearTimeout(this.nextMacroTask);
-      this.nextMacroTask = setTimeout(this.tick, wait);
+      this.nextMacroTask = setTimeout(this.boundFlush, wait);
     }
 
     return token;
@@ -89,7 +81,7 @@ export class Clock {
       let executeAt = this.timers[0];
       let wait = Math.max(0, executeAt - now());
 
-      this.nextMacroTask = setTimeout(this.tick, wait);
+      this.nextMacroTask = setTimeout(this.boundFlush, wait);
     }
 
   }
