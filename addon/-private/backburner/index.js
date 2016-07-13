@@ -10,7 +10,8 @@ import {
 
 export default class Backburner {
 
-  constructor() {
+  constructor(engine) {
+    this.engine = engine;
     this._choked = [];
   }
 
@@ -55,7 +56,7 @@ export default class Backburner {
     if (immediate && index === -1) {
       let job = Backburner.buildFunctionCall(target, method);
 
-      job.call(undefined, ...args);
+      this.engine.schedule('actions', job, ...args);
     }
 
     reference = [
@@ -70,34 +71,51 @@ export default class Backburner {
   }
 
   static buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore) {
-    if (isFunction(potentialMethodOrIgnore)) {
-      return [
-        potentialMethodOrIgnore.bind(potentialTargetOrMethod)
-      ];
-    }
+    let target;
+    let method;
+    let ignoreArg;
 
-    // target is not null
-    if (isNullOrUndefined(potentialTargetOrMethod)) {
+    // do we straight up have a method?
+    if (isFunction(potentialMethodOrIgnore)) {
+      target = potentialTargetOrMethod;
+      method = potentialMethodOrIgnore;
+
+      // do we have a string method and a target?
+    } else if (isNullOrUndefined(potentialTargetOrMethod)) {
       if (isFunction(potentialTargetOrMethod[potentialMethodOrIgnore])) {
-        return [
-          potentialTargetOrMethod[potentialMethodOrIgnore].bind(potentialTargetOrMethod)
-        ];
+        target = potentialTargetOrMethod;
+        method = potentialTargetOrMethod[potentialMethodOrIgnore];
+      } else {
+        // method is neither a function nor a string resolving to a function
+        // and our target is null or undefined
+        throw new Error('Invalid Function Definition');
       }
 
-      // method is neither a function nor a string resolving to a function
-      // and our target is null or undefined
+      // do we have a straight up method as the first arg?
+    } else if (isFunction(potentialTargetOrMethod)) {
+      target = undefined;
+      method = potentialTargetOrMethod;
+      ignoreArg = potentialMethodOrIgnore;
+
+      // we have no function at all
+    } else {
       throw new Error('Invalid Function Definition');
     }
 
-    if (isFunction(potentialTargetOrMethod)) {
-      return [
-        potentialTargetOrMethod,
-        potentialMethodOrIgnore
-      ];
-    }
+    return [
+      method.bind(target),
+      ignoreArg
+    ];
+  }
 
-    // we have no function at all
-    throw new Error('Invalid Function Definition');
+  static buildWrappedFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore, engine) {
+    let [method, ignoreArg] = Backburner.buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore);
+
+    let fn = (...args) => {
+      engine.schedule('actions', method, ...args);
+    };
+
+    return [fn, ignoreArg];
   }
 
   later(...args) {
@@ -119,7 +137,7 @@ export default class Backburner {
     }
 
     if (length === 2) {
-      [method, wait] = Backburner.buildFunctionCall(methodOrTarget, methodOrArg);
+      [method, wait] = Backburner.buildWrappedFunctionCall(methodOrTarget, methodOrArg, this.engine);
 
       if (!wait || !isCoercableNumber(wait)) {
         wait = 0;
@@ -137,7 +155,7 @@ export default class Backburner {
       wait = 0;
     }
 
-    [method, firstArg] = Backburner.buildFunctionCall(methodOrTarget, methodOrArg);
+    [method, firstArg] = Backburner.buildWrappedFunctionCall(methodOrTarget, methodOrArg, this.engine);
 
     args.shift();
     if (!firstArg) {
@@ -152,7 +170,7 @@ function executeChokedFunction(backburner, immediate, target, method, ...args) {
   if (!immediate) {
     let job = Backburner.buildFunctionCall(target, method);
 
-    job.call(undefined, ...args);
+    backburner.engine.schedule('actions', job, ...args);
   }
 
   let index = findItem(target, method, backburner._choked);
