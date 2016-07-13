@@ -14,6 +14,22 @@ export default class Frame {
     }
   }
 
+  addQueue(name, after) {
+    if (this.queueNames.indexOf(name) !== -1) {
+      return;
+    }
+
+    let names = this.queueNames;
+
+    if (after) {
+      names.splice(names.indexOf(after) + 1, 0, name);
+    } else {
+      names.push(name);
+    }
+
+    this.queues.set(name, new FastArray());
+  }
+
   push(name, task) {
     this.queues.get(name).push(task);
   }
