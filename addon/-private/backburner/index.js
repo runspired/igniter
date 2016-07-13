@@ -11,19 +11,22 @@ import {
 export default class Backburner {
 
   constructor() {
-    this.tokenMap = new WeakMap();
-    this.debouncees = [];
+    this._choked = [];
   }
 
-  throttle() {
-    throw new Error('timers are not implemented yet!');
+  throttle(...args) {
+    return this._choke(false, ...args);
   }
 
-  debounce(target, method, ...args) {
+  debounce(...args) {
+    return this._choke(true, ...args);
+  }
+
+  _choke(updateExpireTime, target, method, ...args) {
     let immediate = false;
     let wait = args.pop();
     let index;
-    let debouncee;
+    let reference;
     let timer;
 
     if (isBoolean(wait)) {
@@ -35,15 +38,19 @@ export default class Backburner {
     wait = parseInt(wait, 10);
 
     // Remove debouncee if present
-    index = findDebouncee(target, method, this.debouncees);
+    index = findItem(target, method, this._choked);
 
     if (index > -1) {
-      debouncee = this.debouncees[index];
-      this.debouncees.splice(index, 1);
-      clock.forget(debouncee[2]);
+      if (!updateExpireTime) {
+        return;
+      }
+
+      reference = this._choked[index];
+      this._choked.splice(index, 1);
+      clock.forget(reference[2]);
     }
 
-    timer = clock.schedule(executeDebouncee, wait, this, immediate, target, method, ...args);
+    timer = clock.schedule(executeChokedFunction, wait, this, immediate, target, method, ...args);
 
     if (immediate && index === -1) {
       let job = Backburner.buildFunctionCall(target, method);
@@ -51,13 +58,13 @@ export default class Backburner {
       job.call(undefined, ...args);
     }
 
-    debouncee = [
+    reference = [
       target,
       method,
       timer
     ];
 
-    this.debouncees.push(debouncee);
+    this._choked.push(reference);
 
     return timer;
   }
@@ -86,7 +93,7 @@ export default class Backburner {
       return [
         potentialTargetOrMethod,
         potentialMethodOrIgnore
-        ];
+      ];
     }
 
     // we have no function at all
@@ -141,22 +148,18 @@ export default class Backburner {
   }
 }
 
-function executeDebouncee(backburner, immediate, target, method, ...args) {
+function executeChokedFunction(backburner, immediate, target, method, ...args) {
   if (!immediate) {
     let job = Backburner.buildFunctionCall(target, method);
 
     job.call(undefined, ...args);
   }
 
-  let index = findDebouncee(target, method, backburner.debouncees);
+  let index = findItem(target, method, backburner._choked);
 
   if (index > -1) {
-    backburner.debouncees.splice(index, 1);
+    backburner._choked.splice(index, 1);
   }
-}
-
-function findDebouncee(target, method, debouncees) {
-  return findItem(target, method, debouncees);
 }
 
 function findItem(target, method, collection) {
