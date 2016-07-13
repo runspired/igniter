@@ -1,6 +1,9 @@
 import clock from '../timers/clock';
+import Token from '../tokens';
+
 import {
   isFunction,
+  isBoolean,
   isNullOrUndefined,
   isCoercableNumber
 } from './utils';
@@ -8,15 +11,55 @@ import {
 export default class Backburner {
 
   constructor() {
-
+    this.tokenMap = new WeakMap();
+    this.debouncees = [];
   }
 
   throttle() {
     throw new Error('timers are not implemented yet!');
   }
 
-  debounce() {
-    throw new Error('timers are not implemented yet!');
+  debounce(target, method, ...args) {
+    let immediate = false;
+    let wait = args.pop();
+    let index;
+    let debouncee;
+    let timer;
+
+    if (isBoolean(wait)) {
+      immediate = wait;
+      wait = args.pop();
+      immediate = false;
+    }
+
+    wait = parseInt(wait, 10);
+
+    // Remove debouncee if present
+    index = findDebouncee(target, method, this.debouncees);
+
+    if (index > -1) {
+      debouncee = this.debouncees[index];
+      this.debouncees.splice(index, 1);
+      clock.forget(debouncee[2]);
+    }
+
+    timer = clock.schedule(executeDebouncee, wait, this, immediate, target, method, ...args);
+
+    if (immediate && index === -1) {
+      let job = Backburner.buildFunctionCall(target, method);
+
+      job.call(undefined, ...args);
+    }
+
+    debouncee = [
+      target,
+      method,
+      timer
+    ];
+
+    this.debouncees.push(debouncee);
+
+    return timer;
   }
 
   static buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore) {
@@ -96,4 +139,38 @@ export default class Backburner {
 
     return clock.schedule(method, wait, ...args);
   }
+}
+
+function executeDebouncee(backburner, immediate, target, method, ...args) {
+  if (!immediate) {
+    let job = Backburner.buildFunctionCall(target, method);
+
+    job.call(undefined, ...args);
+  }
+
+  let index = findDebouncee(target, method, backburner.debouncees);
+
+  if (index > -1) {
+    backburner.debouncees.splice(index, 1);
+  }
+}
+
+function findDebouncee(target, method, debouncees) {
+  return findItem(target, method, debouncees);
+}
+
+function findItem(target, method, collection) {
+  var item;
+  var index = -1;
+
+  for (let i = 0, l = collection.length; i < l; i++) {
+    item = collection[i];
+
+    if (item[0] === target && item[1] === method) {
+      index = i;
+      break;
+    }
+  }
+
+  return index;
 }

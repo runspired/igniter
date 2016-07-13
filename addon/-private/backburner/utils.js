@@ -10,6 +10,10 @@ export function isNullOrUndefined(suspect) {
   return suspect === undefined || suspect === null;
 }
 
+export function isBoolean(suspect) {
+  return typeof suspect === 'boolean';
+}
+
 export function isString(suspect) {
   return typeof suspect === 'string';
 }
