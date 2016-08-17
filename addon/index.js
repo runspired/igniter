@@ -2,9 +2,20 @@ import Engine from './engine';
 import Backburner from './-private/backburner';
 
 export default class Igniter {
-  constructor() {
+  constructor(options) {
+    let queues = {
+      event: ['sync', 'actions', 'cleanup'],
+      render: ['render'],
+      measure: ['afterRender', 'measure', 'affect'],
+      idle: ['gc', 'query', 'destroy']
+    };
+
     this.engine = new Engine(queues, options);
     this.backburner = new Backburner(this.engine);
+  }
+
+  flushSync() {
+    this.engine.flushSync();
   }
 
   schedule(...args) {

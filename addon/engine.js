@@ -1,8 +1,7 @@
 import RSVP from 'rsvp';
 import Frame from './frame';
-import Task from './task';
 import HashMap from 'perf-primitives/hash-map';
-import { Promise } from './task';
+import { Task, Promise } from './-private/task';
 import {
   requestAnimationFrame,
   cancelAnimationFrame,
@@ -15,8 +14,6 @@ import {
 } from './microtask-manager';
 
 const FRAMES = ['event', 'render', 'measure', 'idle'];
-const JOB_PREFIX = '-job-';
-let JOB_ID = 0;
 
 const now = performance.now;
 
@@ -48,6 +45,10 @@ export default class Engine {
     };
 
     this.tick();
+  }
+
+  flushSync() {
+
   }
 
   addQueue(opts) {

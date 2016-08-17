@@ -1,5 +1,5 @@
 import HashMap from 'perf-primitives/hash-map';
-import { Promise } from './task';
+import { Promise } from './-private/task';
 
 const MICRO_PREFIX = '-micro-';
 let MICRO_ID = 0;
