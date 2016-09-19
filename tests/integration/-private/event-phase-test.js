@@ -1,11 +1,11 @@
-import { moduleFor, test } from 'ember-qunit';
+import { module, test } from 'qunit';
 import { getQueue, getPhaseForQueue } from '../../helpers/private-lookup';
 import afterMicrotasks from '../../helpers/after-microtask';
 import Igniter from 'igniter';
 
 let igniter;
 
-moduleFor('foo-wut', 'Integration | @private | event phase', {
+module('Integration | @private | event phase', {
   integration: true,
   hooks: {
     beforeEach() {
@@ -34,7 +34,7 @@ test(`We can schedule into the Event Phase via 'sync'`, function(assert) {
   igniter.cancel(job);
 });
 
-test(`We can schedule into the Event Frame via 'actions'`, function(assert) {
+test(`We can schedule into the Event Phase via 'actions'`, function(assert) {
   let queue = getQueue(igniter, 'actions');
 
   assert.expect(3);
@@ -51,7 +51,7 @@ test(`We can schedule into the Event Frame via 'actions'`, function(assert) {
 });
 
 
-test(`The Event phase flushes as a microtask`, function(assert) {
+test(`The Event Phase flushes as a microtask`, function(assert) {
   let advanceTest = assert.async(2);
   let queue = getQueue(igniter, 'actions');
 
@@ -69,7 +69,7 @@ test(`The Event phase flushes as a microtask`, function(assert) {
   });
 });
 
-test(`The Actions queue is flushed after the sync queue`, function(assert) {
+test(`The Actions queue is flushed after the Sync queue`, function(assert) {
   let advanceTest = assert.async(2);
   let syncQueue = getQueue(igniter, 'sync');
   let actionsQueue = getQueue(igniter, 'actions');
