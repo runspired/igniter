@@ -21,15 +21,9 @@ cache:
 
 env:
   - EMBER_TRY_SCENARIO=default
-  - EMBER_TRY_SCENARIO=ember-1.13
-  - EMBER_TRY_SCENARIO=ember-release
-  - EMBER_TRY_SCENARIO=ember-beta
-  - EMBER_TRY_SCENARIO=ember-canary
 
 matrix:
   fast_finish: true
-  allow_failures:
-    - env: EMBER_TRY_SCENARIO=ember-canary
 
 before_install:
   - "export DISPLAY=:99.0"
@@ -45,9 +39,8 @@ install:
   - bower install
 
 script:
-  - ember try $EMBER_TRY_SCENARIO test --skip-cleanup
+  - ember try:one $EMBER_TRY_SCENARIO test --skip-cleanup
 
 branches:
   only:
     - master
-    - develop
