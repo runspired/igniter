@@ -1,5 +1,5 @@
 import RSVP from 'rsvp';
-import Frame from './frame';
+import Phase from './frame';
 import HashMap from 'perf-primitives/hash-map';
 import { Task, Promise } from './-private/task';
 import {
@@ -37,11 +37,11 @@ export default class Engine {
     this.idleJobs = 0;
     this.nextMicroFlush = undefined;
 
-    this.frames = {
-      event: new Frame('event', queues.event),
-      render: new Frame('render', queues.render),
-      measure: new Frame('measure', queues.measure),
-      idle: new Frame('idle', queues.idle)
+    this.phases = {
+      event: new Phase('event', queues.event),
+      render: new Phase('render', queues.render),
+      measure: new Phase('measure', queues.measure),
+      idle: new Phase('idle', queues.idle)
     };
 
     this.tick();
@@ -56,7 +56,7 @@ export default class Engine {
       throw new Error(`Attempted to create the queue '${opts.name}' in the frame '${opts.frame}' but only the EventFrame has configurable queues!`);
     }
 
-    this.frames.event.addQueue(opts.name, opts.after);
+    this.phases.event.addQueue(opts.name, opts.after);
   }
 
   tick() {
@@ -64,8 +64,8 @@ export default class Engine {
       () => {
         this.meta.frameData.start = now();
 
-        this.frames.render.flush();
-        this.frames.measure.flush();
+        this.phases.render.flush();
+        this.phases.measure.flush();
 
         this.meta.lastFrame = this.meta.frameData;
         this.meta.frameData = new FrameData();
@@ -90,7 +90,7 @@ export default class Engine {
       this.idleJobs++;
     }
 
-    this.frames[frame].push(name, task);
+    this.phases[frame].push(name, task);
     this.items.set(task, task);
 
     return task;
@@ -98,7 +98,7 @@ export default class Engine {
 
   addOnce(name, target, method, args) {
     let key = target || method;
-    let task = this.frames[name].nonces.get(key);
+    let task = this.phases[name].nonces.get(key);
 
     if (task) {
       // stitch old task resolution to new task value?
@@ -106,7 +106,7 @@ export default class Engine {
     }
 
     task = this.add(name, target, method, args);
-    this.frames[name].nonces.set(key, task);
+    this.phases[name].nonces.set(key, task);
 
     return task;
   }
@@ -114,7 +114,7 @@ export default class Engine {
   scheduleMicroFlush() {
     if (!this.nextMicroFlush) {
       this.nextMicroFlush = this.scheduleMicroTask(() => {
-        this.frames.event.flush();
+        this.phases.event.flush();
         this.nextMicroFlush = undefined;
       });
     }
