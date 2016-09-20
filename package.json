@@ -1,5 +1,5 @@
 {
-  "name": "igniter",
+  "name": "igniter-core",
   "version": "0.0.0",
   "description": "Intelligent Work Distribution for JavaScript Applications",
   "directories": {
