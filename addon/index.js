@@ -1,37 +1,34 @@
-import Engine from './engine';
+import Engine from './-private/engine';
 import Backburner from './-private/backburner';
 
 export default class Igniter {
-  constructor(options) {
-    let queues = {
-      event: ['sync', 'actions', 'cleanup'],
-      render: ['render'],
-      measure: ['afterRender', 'measure', 'affect'],
-      idle: ['gc', 'query', 'destroy']
-    };
-
-    this.engine = new Engine(queues, options);
+  constructor() {
+    this.engine = new Engine();
     this.backburner = new Backburner(this.engine);
   }
 
   flushSync() {
-    this.engine.flushSync();
+    this.engine.fastFinish();
   }
 
-  schedule(...args) {
-    return this.engine.add(...args);
+  schedule(name, job) {
+    return this.engine.schedule(name, job);
   }
 
-  scheduleOnce(...args) {
-    return this.engine.addOnce(...args);
+  scheduleOnce(name, job) {
+    return this.engine.scheduleOnce(name, job);
+  }
+
+  cancel(job) {
+    job.cancelled = true;
   }
 
   join(...args) {
     return this.schedule('actions', ...args);
   }
 
-  next(...args) {
-    return this.schedule('next', ...args);
+  next(job) {
+    return this.engine.scheduleNext(job);
   }
 
   later(...args) {
@@ -51,7 +48,13 @@ export default class Igniter {
   }
 
   _addQueue(name, after) {
-    console.warn('deprecated!');
     return this.addQueue({ frame: 'event', name, after });
+  }
+
+  destroy() {
+    this.backburner.destroy();
+    this.engine.destroy();
+    this.backburner = undefined;
+    this.engine = undefined;
   }
 }

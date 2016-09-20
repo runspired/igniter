@@ -7,8 +7,7 @@
 
 // See this note: https://www.w3.org/TR/requestidlecallback/#h-note3
 export const MAXIMUM_DEADLINE = 50;
-
-const now = performance.now;
+import now from '../time/now';
 
 function Deadline(expires) {
   let currentTime = now();

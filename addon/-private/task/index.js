@@ -1,15 +1,19 @@
-import RSVP from 'rsvp';
+import { stripInProduction } from '../developer-ergonomics';
+import Promise from '../promise';
 
-const { Promise } = RSVP;
+export function createWrappedTask(job, token) {
+  let work = () => {
+    if (token.cancelled === false) {
+      job();
+    }
+  };
+  let wrappedTask = work;
 
-class Task {
-  constructor() {
-  }
+  stripInProduction(() => {
+    new Promise((resolve) => {
+      wrappedTask = resolve;
+    }).then(work);
+  });
+
+  return wrappedTask;
 }
-
-export {
-  Promise,
-  Task
-};
-
-export default Task;

@@ -1,46 +1,41 @@
-import HashMap from 'perf-primitives/hash-map';
-import { Promise } from './-private/task';
+import FastArray from 'perf-primitives/fast-array';
+import Promise from './-private/promise';
 
-const MICRO_PREFIX = '-micro-';
-let MICRO_ID = 0;
+function K() {}
 
 export class MicroTaskManager {
   constructor() {
     this._nextFlush = undefined;
-    this._jobs = undefined;
+    this._jobs = new FastArray();
   }
 
   schedule(job) {
-    let id = `${MICRO_PREFIX}${MICRO_ID++}`;
-
-    if (!this._nextFlush) {
+    if (this._nextFlush === undefined) {
       this._scheduleFlush();
     }
 
-    this._jobs.set(id, job);
-
-    return id;
+    return this._jobs.push(job);
   }
 
   _scheduleFlush() {
     this._nextFlush = Promise.resolve()
-      .then(() => { this._flush(); });
-    this._jobs = new HashMap();
+      .then(() => {
+        this._flush();
+      });
   }
 
   _flush() {
-    this._jobs.forEach((job) => {
+    this._jobs.emptyEach((job) => {
       job.call(undefined);
     });
 
-    this._jobs = undefined;
     this._nextFlush = undefined;
   }
 
   cancel(id) {
-    this._jobs.delete(id);
+    debugger;
+    this._jobs.set(id, K);
   }
-
 }
 
 export const manager = new MicroTaskManager();

@@ -13,30 +13,28 @@ function beforeFrametasks(job) {
 
 module('Integration | @private | layout phase', {
   integration: true,
-  hooks: {
-    beforeEach() {
-      beforeFrameQueue = [];
-      beforeFrameTimeout = requestAnimationFrame((frameStartTime) => {
-        beforeFrameQueue.forEach((job) => {
-          job(frameStartTime);
-        });
+  beforeEach() {
+    beforeFrameQueue = [];
+    beforeFrameTimeout = requestAnimationFrame((frameStartTime) => {
+      beforeFrameQueue.forEach((job) => {
+        job(frameStartTime);
       });
-      igniter = new Igniter();
-    },
-    afterEach() {
-      cancelAnimationFrame(beforeFrameTimeout);
-      beforeFrameTimeout = null;
-      beforeFrameQueue = null;
-      igniter.destroy();
-      igniter = null;
-    }
+    });
+    igniter = new Igniter();
+  },
+  afterEach() {
+    cancelAnimationFrame(beforeFrameTimeout);
+    beforeFrameTimeout = null;
+    beforeFrameQueue = null;
+    igniter.destroy();
+    igniter = null;
   }
 });
 
 test(`We can schedule into the Layout Phase via 'render'`, function(assert) {
   let queue = getQueue(igniter, 'render');
 
-  assert.expect(2);
+  assert.expect(3);
   assert.equal(queue.length, 0, 'The render queue is initially empty');
 
   let job = igniter.schedule('render', function() {
@@ -65,9 +63,8 @@ test(`We can schedule into the Layout Phase via 'afterRender'`, function(assert)
   igniter.cancel(job);
 });
 
-
 test(`The Layout Phase flushes as a frame task`, function(assert) {
-  let advanceTest = assert.async(2);
+  let advanceTest = assert.async(3);
   let queue = getQueue(igniter, 'render');
   let frameStartTime;
 
@@ -96,6 +93,8 @@ test(`The afterRender queue is flushed after the render queue`, function(assert)
   let advanceTest = assert.async(2);
   let renderQueue = getQueue(igniter, 'render');
   let afterRenderQueue = getQueue(igniter, 'afterRender');
+  let afterRenderHasEmptied = false;
+  let renderHasEmptied = false;
 
   assert.expect(8);
 
@@ -103,13 +102,15 @@ test(`The afterRender queue is flushed after the render queue`, function(assert)
   assert.equal(afterRenderQueue.length, 0, 'The afterRender queue is initially empty');
 
   igniter.schedule('render', function() {
+    renderHasEmptied = true;
     assert.ok('Our render job was run');
-    assert.equal(afterRenderQueue.length, 1, 'The afterRender queue has not been flushed before the render queue');
+    assert.equal(afterRenderHasEmptied, false, 'The afterRender queue has not been flushed before the render queue');
     advanceTest();
   });
   igniter.schedule('afterRender', function() {
+    afterRenderHasEmptied = true;
     assert.ok('Our afterRender job was run');
-    assert.equal(renderQueue.length, 0, 'The render queue has been emptied before the afterRender queue');
+    assert.equal(renderHasEmptied, true, 'The render queue has been emptied before the afterRender queue');
     advanceTest();
   });
 
@@ -121,6 +122,8 @@ test(`The Layout Frame flushes after the Event Frame`, function(assert) {
   let advanceTest = assert.async(2);
   let actionsQueue = getQueue(igniter, 'actions');
   let renderQueue = getQueue(igniter, 'render');
+  let actionsHasEmptied = false;
+  let renderHasEmptied = false;
 
   assert.expect(8);
 
@@ -128,13 +131,15 @@ test(`The Layout Frame flushes after the Event Frame`, function(assert) {
   assert.equal(renderQueue.length, 0, 'The render queue is initially empty');
 
   igniter.schedule('actions', function() {
+    actionsHasEmptied = true;
     assert.ok('Our actions job was run');
-    assert.equal(renderQueue.length, 1, 'The render queue has not been flushed before the actions queue');
+    assert.equal(renderHasEmptied, false, 'The render queue has not been flushed before the actions queue');
     advanceTest();
   });
   igniter.schedule('render', function() {
+    renderHasEmptied = true;
     assert.ok('Our render job was run');
-    assert.equal(actionsQueue.length, 0, 'The actions queue has been emptied before the render queue');
+    assert.equal(actionsHasEmptied, true, 'The actions queue has been emptied before the render queue');
     advanceTest();
   });
 

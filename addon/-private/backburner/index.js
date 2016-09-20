@@ -9,7 +9,6 @@ import {
 } from './utils';
 
 export default class Backburner {
-
   constructor(engine) {
     this.engine = engine;
     this._choked = [];
@@ -110,7 +109,6 @@ export default class Backburner {
 
   static buildWrappedFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore, engine) {
     let [method, ignoreArg] = Backburner.buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore);
-
     let fn = (...args) => {
       engine.schedule('actions', method, ...args);
     };
@@ -119,7 +117,7 @@ export default class Backburner {
   }
 
   later(...args) {
-    let length = args.length;
+    let { length } = args;
     let method;
     let wait;
     let firstArg;
@@ -164,6 +162,11 @@ export default class Backburner {
 
     return clock.schedule(method, wait, ...args);
   }
+
+  destroy() {
+    this.engine = null;
+    this._choked = null;
+  }
 }
 
 function executeChokedFunction(backburner, immediate, target, method, ...args) {
@@ -181,8 +184,8 @@ function executeChokedFunction(backburner, immediate, target, method, ...args) {
 }
 
 function findItem(target, method, collection) {
-  var item;
-  var index = -1;
+  let item;
+  let index = -1;
 
   for (let i = 0, l = collection.length; i < l; i++) {
     item = collection[i];

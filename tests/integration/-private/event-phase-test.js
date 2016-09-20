@@ -1,27 +1,25 @@
 import { module, test } from 'qunit';
 import { getQueue, getPhaseForQueue } from '../../helpers/private-lookup';
-import afterMicrotasks from '../../helpers/after-microtask';
+import afterMicrotasks from '../../helpers/after-microtasks';
 import Igniter from 'igniter';
 
 let igniter;
 
 module('Integration | @private | event phase', {
   integration: true,
-  hooks: {
-    beforeEach() {
-      igniter = new Igniter();
-    },
-    afterEach() {
-      igniter.destroy();
-      igniter = null;
-    }
+  beforeEach() {
+    igniter = new Igniter();
+  },
+  afterEach() {
+    igniter.destroy();
+    igniter = null;
   }
 });
 
 test(`We can schedule into the Event Phase via 'sync'`, function(assert) {
   let queue = getQueue(igniter, 'sync');
 
-  assert.expect(2);
+  assert.expect(3);
   assert.equal(queue.length, 0, 'The sync queue is initially empty');
 
   let job = igniter.schedule('sync', function() {
@@ -50,7 +48,6 @@ test(`We can schedule into the Event Phase via 'actions'`, function(assert) {
   igniter.cancel(job);
 });
 
-
 test(`The Event Phase flushes as a microtask`, function(assert) {
   let advanceTest = assert.async(2);
   let queue = getQueue(igniter, 'actions');
@@ -73,6 +70,8 @@ test(`The Actions queue is flushed after the Sync queue`, function(assert) {
   let advanceTest = assert.async(2);
   let syncQueue = getQueue(igniter, 'sync');
   let actionsQueue = getQueue(igniter, 'actions');
+  let actionsHasEmptied = false;
+  let syncHasEmptied = false;
 
   assert.expect(8);
 
@@ -80,13 +79,15 @@ test(`The Actions queue is flushed after the Sync queue`, function(assert) {
   assert.equal(actionsQueue.length, 0, 'The actions queue is initially empty');
 
   igniter.schedule('sync', function() {
+    syncHasEmptied = true;
     assert.ok('Our sync job was run');
-    assert.equal(actionsQueue.length, 1, 'The actions queue has not been flushed before the sync queue');
+    assert.equal(actionsHasEmptied, false, 'The actions queue has not been flushed before the sync queue');
     advanceTest();
   });
   igniter.schedule('actions', function() {
+    actionsHasEmptied = true;
     assert.ok('Our actions job was run');
-    assert.equal(syncQueue.length, 0, 'The sync queue has been emptied before the actions queue');
+    assert.equal(syncHasEmptied, true, 'The sync queue has been emptied before the actions queue');
     advanceTest();
   });
 

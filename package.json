@@ -44,7 +44,7 @@
     "fps"
   ],
   "dependencies": {
-    "perf-primitives": "0.0.4",
+    "perf-primitives": "0.0.5",
     "ember-cli-babel": "^5.1.6"
   },
   "ember-addon": {

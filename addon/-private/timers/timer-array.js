@@ -1,8 +1,5 @@
-import binaryTimerSearch from './binary-timer-search';
-
+const { now } = Date;
 export const MACRO_TASK_EXECUTION_ADJUSTMENT = 3;
-
-const now = Date.now;
 
 export default class TimerArray {
   constructor() {
@@ -73,16 +70,16 @@ export default class TimerArray {
   }
 
   flushExpired() {
-    let now = Date.now() + MACRO_TASK_EXECUTION_ADJUSTMENT;
+    let time = now() + MACRO_TASK_EXECUTION_ADJUSTMENT;
     let timers = this.data;
     let i = 0;
-    let length = timers.length;
+    let len = timers.length;
 
-    for (; i < length; i += 2) {
+    for (; i < len; i += 2) {
       let executeAt = timers[i];
       let fn = timers[i + 1];
 
-      if (executeAt <= now) {
+      if (executeAt <= time) {
         fn();
       } else {
         break;
