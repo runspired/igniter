@@ -4,7 +4,8 @@ import { GUID_KEY } from './metal-utils';
 import { beginPropertyChanges, endPropertyChanges } from './metal-property_events';
 
 const {
-  assert
+  assert,
+  testing: ENV_IS_TESTING
 } = Ember;
 
 /*
@@ -25,14 +26,14 @@ class BackburnerIgniter extends Igniter {
 }
 
 let backburner = new BackburnerIgniter({
-  GUID_KEY: GUID_KEY,
+  GUID_KEY,
   sync: {
     before: beginPropertyChanges,
     after: endPropertyChanges
   },
   defaultQueue: 'actions',
-  onBegin: onBegin,
-  onEnd: onEnd,
+  onBegin,
+  onEnd,
   onErrorTarget: Ember,
   onErrorMethod: 'onerror'
 });
@@ -130,7 +131,7 @@ function checkAutoRun() {
     assert(
       `You have turned on testing mode, which disabled the run-loop's autorun. ` +
       `You will need to wrap any code with asynchronous side-effects in a run`,
-      !Ember.testing
+      !ENV_IS_TESTING
     );
   }
 }

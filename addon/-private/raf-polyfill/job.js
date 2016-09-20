@@ -28,7 +28,7 @@ Job.prototype.destroy = function destroyJob() {
 };
 
 Job.prototype.execute = function executeJob(time) {
-  this.job.call(undefined, time);
+  this.work.call(undefined, time);
 };
 
 export default Job;

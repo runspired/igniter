@@ -1,7 +1,7 @@
 import AnimationFrame from './frame';
 import clock from '../timers/clock';
+import now from '../time/now';
 
-const now = performance.now;
 const SCREEN_REFRESH_RATE = 1000 / 60;
 const INITIAL_FRAME_DELAY = 32;
 

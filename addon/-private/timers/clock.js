@@ -2,7 +2,7 @@
 import { setTimeout, clearTimeout } from '../../-globals';
 import TimerArray from './timer-array';
 import Token from '../tokens';
-const now = Date.now;
+const { now } = Date;
 
 function wrapForTimer(work, token) {
   return function checkForCancelled() {
@@ -25,7 +25,8 @@ export class Clock {
     `Clock.schedule` allows you to push in a new `method`
     to be executed once `wait` has passed.
    */
-  schedule(method, wait = 0, ...args) {
+  schedule(method, wait, ...args) {
+    wait = wait || 0;
     let executeAt = now() + wait;
     let token = new Token();
     let work = method;
@@ -78,7 +79,7 @@ export class Clock {
     this.timers.flushExpired();
 
     if (this.timers.length > 0) {
-      let executeAt = this.timers[0];
+      let [executeAt] = this.timers;
       let wait = Math.max(0, executeAt - now());
 
       this.nextMacroTask = setTimeout(this.boundFlush, wait);

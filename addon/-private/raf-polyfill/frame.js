@@ -1,7 +1,6 @@
 import FastArray from 'perf-primitives/fast-array';
 import Job from './job';
-
-const now = performance.now;
+import now from '../time/now';
 
 export default class AnimationFrame {
   constructor() {
