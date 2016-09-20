@@ -1,4 +1,5 @@
 import Phase from './phase';
+import Buffer from './buffer';
 import {
   requestAnimationFrame,
   cancelAnimationFrame,
@@ -39,7 +40,28 @@ export default class Engine {
     this.isRunning = false;
     this.jobCount = 0;
 
+    this._buffers = [];
+
     this.start();
+  }
+
+  createBuffer(fn, opts) {
+    let buffer = new Buffer(fn, opts);
+    this._buffers.push(buffer);
+
+    /*
+      This should setup a hook for the parent to call into the buffer before render
+      if required. This hook should happen pre beforeRender.
+     */
+
+    return buffer;
+  }
+
+  destroyBuffer(buffer) {
+    /*
+      unhook and forget the buffer here.
+      this should be called by buffer.destroy();
+     */
   }
 
   start() {

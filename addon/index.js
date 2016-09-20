@@ -19,6 +19,10 @@ export default class Igniter {
     return this.engine.scheduleOnce(name, job);
   }
 
+  createBuffer(fn, opts) {
+    return this.engine.createBuffer(fn, opts);
+  }
+
   cancel(job) {
     job.cancelled = true;
   }
