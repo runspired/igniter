@@ -115,7 +115,6 @@ export default class Engine {
         this.phases.event.flush();
         this.nextMicroTick = undefined;
       });
-      debugger;
     }
   }
 

@@ -33,7 +33,6 @@ export class MicroTaskManager {
   }
 
   cancel(id) {
-    debugger;
     this._jobs.set(id, K);
   }
 }
