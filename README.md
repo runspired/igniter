@@ -6,6 +6,10 @@
 
 Intelligent Work Distribution for JavaScript Applications.
 
+## Installation
+
+`npm install --save igniter-core`
+
 ## About
 
 Igniter allows you to schedule work in ways that best align with
