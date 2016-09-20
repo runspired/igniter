@@ -42,7 +42,7 @@ igniter.throttle(<fn> [, ...args], <milliseconds>);
 
 igniter.debounce(<fn> [, ...args], <milliseconds>, <immediate>);
 
-igniter.next(<queueName>, <fn>);
+igniter.scheduleNext(<queueName>, <fn>);
 ```
 
 ## Use with Buffers
@@ -70,7 +70,7 @@ buffer.schedule(<queueName>, <fn>);
 // once.
 buffer.scheduleOnce(<queueName>, <fn>);
 
-buffer.next(<queueName>, <fn>);
+buffer.scheduleNext(<queueName>, <fn>);
 
 // empty the buffer into the igniter instance
 buffer.flush();
