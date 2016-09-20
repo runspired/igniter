@@ -17,51 +17,138 @@ the browser's render cycle, minimizing forced layouts, reducing
 instances of duplicated work, and giving us highly granular timing
 and order of operation guarantees.
 
-`Tasks` in Igniter are scheduled into a `Queue` within a `Frame` either
-directly or via a `Timer`, a `Deadline`, or a `Buffer`.
+`Tasks` in Igniter are scheduled into a `Queue` within a `Phase` either
+directly, via a `Timer`, or indirectly via a `Buffer`.
 
-## Frames
+## Primary Use
+
+```js
+import Igniter from 'igniter-core';
+
+const igniter = new Igniter();
+
+// schedule some work into a queue
+igniter.schedule(<queueName>, <fn>);
+
+// schedule some work into a queue, enforce that it is only scheduled
+// once.
+igniter.scheduleOnce(<queueName>, <fn>);
+
+// similar to setTimeout but with better timing guarantees
+// it will also flush within the `actions` queue.
+igniter.later(<fn>, <milliseconds>);
+
+igniter.throttle(<fn> [, ...args], <milliseconds>);
+
+igniter.debounce(<fn> [, ...args], <milliseconds>, <immediate>);
+
+igniter.next(<queueName>, <fn>);
+```
+
+## Use with Buffers
+
+Buffers are ideal for deferring scheduling of work until some primary
+task is complete.
+
+```js
+import Igniter from 'igniter-core';
+
+const igniter = new Igniter();
+const buffer = igniter.buffer(function(deadline, isAboutToRender) {
+  /*
+  .. do some of what you need ..
+  .. this function will be run asap using `requestIdleCallback` .. 
+  .. until buffer.pause() is called ..
+  .. a paused buffer can be resumed via buffer.resume() ..
+  */
+}, { timeout: 16, allowFinishBeforeRender: true });
+
+// schedule some work into a buffer
+buffer.schedule(<queueName>, <fn>);
+
+// schedule some work into a buffer, enforce that it is only scheduled
+// once.
+buffer.scheduleOnce(<queueName>, <fn>);
+
+buffer.next(<queueName>, <fn>);
+
+// empty the buffer into the igniter instance
+buffer.flush();
+```
+
+When using a buffer, it's ideal to yield control back to the main thread
+as often as possible.
+
+## Phases
 
 Types of work are divided into `Event`, `Layout`, `Measure` and `Idle`.
-frames. These frames have unique timing guarantees and purposed queues.
+phases. These phases have specialized timing guarantees and contain named
+queues intended for specific types of work you should be doing in that phase.
 
-The purposed queues are emptied in the order they are specified below.
-Emptying is linear, it will not cycle back, but appending to an active
-queue is valid.
+Queues are emptied in the order they are specified below.
 
-All frames have a `cleanup` queue at the end, which will empty anything
-that's been scheduled for cleanup at that point.
+All phases except `idle` have a `cleanup` queue at the end, which will
+empty anything that's been scheduled for cleanup at that point.
 
-There is also a specialized `next` queue which flushes with an `as soon
-as possible` policy and is similar in nature to `requestAnimationFrame`
-in that you always schedule into the upcoming flush, unless you are
-currently flushing the `next` queue, in which case you schedule into the
-next `next` flush.
 
-### EventFrame
+### Event Phase
 
-- sync // do these things first
-- actions // do these things second
-- cleanup
+The event phase flushes as a microtask and is ideal for scheduling work
+that should be done asynchronously but immediately.
 
-### LayoutFrame
+```
+sync => actions => cleanup
+```
 
-- render
-- afterRender // deprecated, here for legacy backburner support
-- destroy // deprecated, here for legacy backburner support
-- cleanup
+### Layout Phase
 
-### MeasureFrame
+The layout phase is where you should perform your major DOM alterations.
+Rendering engines like Glimmer2 or React should schedule (or deliver)
+their work during `render`.`
 
-- measure // read DOM properties here
-- affect // edit DOM properties here
-- cleanup
+```
+beforeRender => render => afterRender (deprecated) => cleanup
+```
 
-### IdleFrame
+`afterRender` exists for legacy backburner.js support, such uses should 
+now use `measure`.
 
-- idle // work that's just less important, but more aggresive idle than `ric`
-- collect // work that will result in a major GC event (emptying a large array / releasing a large DOM tree)
-- cleanup
+The Layout and Animation phases both flush via `requestAnimationFrame`,
+with Layout being flushed prior to Animation.
+
+### Animation Phase
+
+Minor DOM reads and writes should happen in the Animation phase. You should
+batch DOM reads into `measure` and DOM writes into `affect`.
+
+```
+measure => affect => destroy (deprecated) => cleanup
+```
+
+`destroy` exists to preserve legacy backburner.js timing semantics, such
+uses should now use either `cleanup` or schedule into one of the `idle`
+phase queues.
+
+### Idle Phase
+
+Idle is ideal for work that will result in a major GC event (such as
+emptying a large array / releasing a large DOM tree), or is expensive
+ but has low priority.
+ 
+ 
+```
+high => low
+```
+
+Idle is the only phase without a `cleanup` queue.
+
+Idle is similar in nature to using `requestIdleCallback`.  All work
+present in the `high` queue will be completed before the `low` queue
+unless the deadline for that work has passed.
+
+Unlike other phases, Idle does not flush all of its jobs at once, but
+instead yields back to Igniter if any other work is scheduled or if
+too much time has passed.
 
 ## Buffers
 
