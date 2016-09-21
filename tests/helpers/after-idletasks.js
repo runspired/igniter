@@ -9,5 +9,5 @@
  the engine.
  */
 export default function(callback) {
-  requestAnimationFrame(callback);
+  requestIdleCallback(callback);
 }

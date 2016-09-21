@@ -57,9 +57,9 @@ const igniter = new Igniter();
 const buffer = igniter.buffer(function(deadline, isAboutToRender) {
   /*
   .. do some of what you need ..
-  .. this function will be run asap using `requestIdleCallback` .. 
-  .. until buffer.pause() is called ..
-  .. a paused buffer can be resumed via buffer.resume() ..
+  .. this function will be run asap using `requestIdleCallback` ..
+  .. until buffer.stop() is called ..
+  .. a stopped buffer can be resumed via buffer.start() ..
   */
 }, { timeout: 16, allowFinishBeforeRender: true });
 
@@ -110,7 +110,7 @@ their work during `render`.`
 beforeRender => render => afterRender (deprecated) => cleanup
 ```
 
-`afterRender` exists for legacy backburner.js support, such uses should 
+`afterRender` exists for legacy backburner.js support, such uses should
 now use `measure`.
 
 The Layout and Animation phases both flush via `requestAnimationFrame`,
@@ -134,8 +134,8 @@ phase queues.
 Idle is ideal for work that will result in a major GC event (such as
 emptying a large array / releasing a large DOM tree), or is expensive
  but has low priority.
- 
- 
+
+
 ```
 high => low
 ```

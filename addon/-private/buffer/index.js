@@ -1,9 +1,11 @@
 export default class Buffer {
-  constructor(chunk, options) {
+  constructor(parent, chunk, options) {
     this.parentEngine = parent;
     this.paused = false;
     this._chunk = chunk;
     this.options = options;
+
+    this.nextIdleJob = undefined;
     this._queues = {
       sync: [],
       actions: [],
@@ -15,25 +17,39 @@ export default class Buffer {
     };
   }
 
-  pause() {
-    this.paused = true;
+  stop() {
+    if (this.nextIdleJob) {
+      this.nextIdleJob.cancelled = true;
+    }
+    this.stopped = true;
   }
 
-  resume() {
-    this.paused = false;
+  start() {
+    this.stopped = false;
     this._tick();
   }
 
-  schedule() {
+  // schedule() {
+  //
+  // }
+  //
+  // scheduleOnce() {
+  //
+  // }
+  //
+  // scheduleNext() {
+  //
+  // }
 
-  }
-
-  scheduleOnce() {
-
-  }
-
-  scheduleNext() {
-
+  finishBeforeRender() {
+    if (!this.stopped) {
+      this._exec({
+        timeRemaining() {
+          return 0;
+        },
+        didTimeout: true
+      }, true);
+    }
   }
 
   /*
@@ -45,9 +61,10 @@ export default class Buffer {
   }
 
   _tick() {
-    this.parentEngine.schedule('high', (deadline) => {
-      if (!this.paused) {
-        this._exec(deadline);
+    this._nextIdleJob = this.parentEngine.schedule('high', (deadline) => {
+      this._exec(deadline);
+
+      if (!this.stopped) {
         this._tick();
       }
     });
@@ -59,6 +76,8 @@ export default class Buffer {
     internal state.
    */
   flush() {
-
+    this.stopped = true;
+    this.nextIdleJob.cancelled = true;
+    this.nextIdleJob = undefined;
   }
 }

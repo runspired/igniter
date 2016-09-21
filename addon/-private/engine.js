@@ -41,28 +41,28 @@ export default class Engine {
     this.jobCount = 0;
 
     this._buffers = [];
+    this._finishableBuffers = [];
 
     this.start();
   }
 
   createBuffer(fn, opts) {
-    let buffer = new Buffer(fn, opts);
+    let buffer = new Buffer(this, fn, opts);
     this._buffers.push(buffer);
 
-    /*
-      This should setup a hook for the parent to call into the buffer before render
-      if required. This hook should happen pre beforeRender.
-     */
+    if (opts.allowFinishBeforeRender) {
+      this._finishableBuffers.push(buffer);
+    }
 
     return buffer;
   }
 
-  destroyBuffer(buffer) {
-    /*
-      unhook and forget the buffer here.
-      this should be called by buffer.destroy();
-     */
-  }
+  // destroyBuffer(buffer) {
+  //   /*
+  //     unhook and forget the buffer here.
+  //     this should be called by buffer.destroy();
+  //    */
+  // }
 
   start() {
     this.isRunning = true;
@@ -107,6 +107,8 @@ export default class Engine {
 
     if (phase.name === 'event') {
       this._scheduleEventFlush();
+    } else if (phase.name === 'idle') {
+      this._scheduleIdleFlush();
     }
 
     return phase.push(name, job);
@@ -134,8 +136,17 @@ export default class Engine {
   _scheduleEventFlush() {
     if (!this.nextMicroTick) {
       this.nextMicroTick = this.scheduleMicroTask(() => {
-        this.phases.event.flush();
         this.nextMicroTick = undefined;
+        this.phases.event.flush();
+      });
+    }
+  }
+
+  _scheduleIdleFlush() {
+    if (!this.nextIdleTick) {
+      this.nextIdleTick = this.scheduleIdleTask(() => {
+        this.nextIdleTick = undefined;
+        this.phases.idle.flush();
       });
     }
   }
@@ -146,6 +157,7 @@ export default class Engine {
     }
     this.nextFrameTick = this.scheduleFrameTask(
       () => {
+        this._finishableBuffers.forEach((b) => b.finishBeforeRender());
         this.phases.layout.flush();
         this.phases.measure.flush();
         this._tickFrame();
