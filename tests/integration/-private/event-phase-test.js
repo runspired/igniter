@@ -1,17 +1,15 @@
-import { module, test } from 'qunit';
+import module from '../../helpers/module';
+import { test } from 'qunit';
 import { getQueue, getPhaseForQueue } from '../../helpers/private-lookup';
 import afterMicrotasks from '../../helpers/after-microtasks';
-import Igniter from 'igniter';
 
 let igniter;
 
 module('Integration | @private | event phase', {
-  integration: true,
   beforeEach() {
-    igniter = new Igniter();
+    igniter = this.igniter;
   },
   afterEach() {
-    igniter.destroy();
     igniter = null;
   }
 });

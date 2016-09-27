@@ -1,34 +1,32 @@
-import { module, test } from 'qunit';
+import module from '../../helpers/module';
+import { test } from 'qunit';
 import { getQueue, getPhaseForQueue } from '../../helpers/private-lookup';
-import afterFrametasks from '../../helpers/after-frametasks';
-import Igniter from 'igniter';
 
 let igniter;
-let beforeFrameQueue;
-let beforeFrameTimeout;
-
-function beforeFrametasks(job) {
-  beforeFrameQueue.push(job);
-}
 
 module('Integration | @private | layout phase', {
-  integration: true,
   beforeEach() {
-    beforeFrameQueue = [];
-    beforeFrameTimeout = requestAnimationFrame((frameStartTime) => {
-      beforeFrameQueue.forEach((job) => {
-        job(frameStartTime);
-      });
-    });
-    igniter = new Igniter();
+    igniter = this.igniter;
   },
   afterEach() {
-    cancelAnimationFrame(beforeFrameTimeout);
-    beforeFrameTimeout = null;
-    beforeFrameQueue = null;
-    igniter.destroy();
     igniter = null;
   }
+});
+
+test(`We can schedule into the Layout Phase via 'beforeRender'`, function(assert) {
+  let queue = getQueue(igniter, 'beforeRender');
+
+  assert.expect(3);
+  assert.equal(queue.length, 0, 'The beforeRender queue is initially empty');
+
+  let job = igniter.schedule('beforeRender', function() {
+    assert.notOk(`Our 'beforeRender' job was run despite being cancelled.`);
+  });
+
+  assert.equal(getPhaseForQueue(igniter, 'beforeRender').name, 'layout', `The 'beforeRender' queue is within the Layout Phase`);
+  assert.equal(queue.length, 1, 'Our job was scheduled into the correct queue');
+
+  igniter.cancel(job);
 });
 
 test(`We can schedule into the Layout Phase via 'render'`, function(assert) {
@@ -41,13 +39,13 @@ test(`We can schedule into the Layout Phase via 'render'`, function(assert) {
     assert.notOk(`Our 'render' job was run despite being cancelled.`);
   });
 
-  assert.equal(getPhaseForQueue(igniter, 'render').name, 'layout', `The 'render' queue is within the layout phase`);
+  assert.equal(getPhaseForQueue(igniter, 'render').name, 'layout', `The 'render' queue is within the Layout Phase`);
   assert.equal(queue.length, 1, 'Our job was scheduled into the correct queue');
 
   igniter.cancel(job);
 });
 
-test(`We can schedule into the Layout Phase via 'afterRender'`, function(assert) {
+test(`[@deprecated @legacy] We can schedule into the Layout Phase via 'afterRender'`, function(assert) {
   let queue = getQueue(igniter, 'afterRender');
 
   assert.expect(3);
@@ -63,6 +61,21 @@ test(`We can schedule into the Layout Phase via 'afterRender'`, function(assert)
   igniter.cancel(job);
 });
 
+test(`[@deprecated @legacy] Schedule into 'afterRender' prints a deprecation notice.`, function(assert) {
+  this.double(console, 'warn', function(message) {
+    assert.ok(message.indexOf('DEPRECATION') === 0, `We print a deprecation`);
+    assert.ok(message.indexOf('[deprecation id: igniter.legacy-backburner.afterRender') !== -1, `The deprecation has the correct ID`);
+  });
+
+  assert.expect(2);
+
+  let job = igniter.schedule('afterRender', function() {
+    assert.notOk(`Our 'afterRender' job was run despite being cancelled.`);
+  });
+
+  igniter.cancel(job);
+});
+
 test(`The Layout Phase flushes as a frame task`, function(assert) {
   let advanceTest = assert.async(3);
   let queue = getQueue(igniter, 'render');
@@ -71,7 +84,7 @@ test(`The Layout Phase flushes as a frame task`, function(assert) {
   assert.expect(5);
   assert.equal(queue.length, 0, 'The render queue is initially empty');
 
-  beforeFrametasks(function(time) {
+  this.beforeFrameTasks(function(time) {
     frameStartTime = time;
     assert.equal(queue.length, 1, 'The render queue has not flushed at frame start');
     advanceTest();
@@ -82,14 +95,43 @@ test(`The Layout Phase flushes as a frame task`, function(assert) {
     advanceTest();
   });
 
-  afterFrametasks(function(frameTime) {
+  this.afterCurrentFrameTasks(function(frameTime) {
     assert.equal(frameTime, frameStartTime, 'Our jobs flushed within the same frame');
     assert.equal(queue.length, 0, 'Our job was flushed as a frame-task');
     advanceTest();
   });
 });
 
-test(`The afterRender queue is flushed after the render queue`, function(assert) {
+test(`The render queue is flushed after the beforeRender queue`, function(assert) {
+  let advanceTest = assert.async(2);
+  let beforeRenderQueue = getQueue(igniter, 'beforeRender');
+  let renderQueue = getQueue(igniter, 'render');
+  let renderHasEmptied = false;
+  let beforeRenderHasEmptied = false;
+
+  assert.expect(8);
+
+  assert.equal(beforeRenderQueue.length, 0, 'The beforeRender queue is initially empty');
+  assert.equal(renderQueue.length, 0, 'The render queue is initially empty');
+
+  igniter.schedule('beforeRender', function() {
+    beforeRenderHasEmptied = true;
+    assert.ok('Our beforeRender job was run');
+    assert.equal(renderHasEmptied, false, 'The render queue has not been flushed before the beforeRender queue');
+    advanceTest();
+  });
+  igniter.schedule('render', function() {
+    renderHasEmptied = true;
+    assert.ok('Our afterRender job was run');
+    assert.equal(beforeRenderHasEmptied, true, 'The beforeRender queue has been emptied before the render queue');
+    advanceTest();
+  });
+
+  assert.equal(beforeRenderQueue.length, 1, 'The beforeRender job was scheduled');
+  assert.equal(renderQueue.length, 1, 'The render job was scheduled');
+});
+
+test(`[@deprecated @legacy] The afterRender queue is flushed after the render queue`, function(assert) {
   let advanceTest = assert.async(2);
   let renderQueue = getQueue(igniter, 'render');
   let afterRenderQueue = getQueue(igniter, 'afterRender');

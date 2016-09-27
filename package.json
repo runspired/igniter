@@ -44,6 +44,10 @@
     "fps"
   ],
   "dependencies": {
+    "babel-plugin-filter-imports": "^0.2.1",
+    "babel5-plugin-strip-class-callcheck": "^5.1.0",
+    "broccoli-funnel": "^1.0.7",
+    "chalk": "^1.1.3",
     "perf-primitives": "0.0.5",
     "ember-cli-babel": "^5.1.6"
   },

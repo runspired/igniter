@@ -1,3 +1,7 @@
+function tempNotImplemented() {
+  throw new Error('Method Not Implemented [yet ;)]');
+}
+
 export default class Buffer {
   constructor(chunk, options) {
     this.parentEngine = parent;
@@ -25,15 +29,15 @@ export default class Buffer {
   }
 
   schedule() {
-
+    tempNotImplemented();
   }
 
   scheduleOnce() {
-
+    tempNotImplemented();
   }
 
   scheduleNext() {
-
+    tempNotImplemented();
   }
 
   /*
@@ -59,6 +63,6 @@ export default class Buffer {
     internal state.
    */
   flush() {
-
+    tempNotImplemented();
   }
 }

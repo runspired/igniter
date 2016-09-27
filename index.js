@@ -40,7 +40,8 @@ module.exports = {
             'instrument',
             'deprecate',
             'stripInProduction',
-            'developModeOnly'
+            'developModeOnly',
+            'conditionalDeprecation'
           ]
         })
       );

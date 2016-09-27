@@ -12,23 +12,23 @@ import {
   setMicroTask,
   clearMicroTask
 } from '../microtask-manager';
-import { assert } from 'igniter/-debug';
+import { assert, conditionalDeprecation } from 'igniter/-debug';
 
 export default class Engine {
   constructor() {
     let phases = this.phases = {
       event: new Phase('event', ['sync', 'actions']),
       layout: new Phase('layout', ['beforeRender', 'render', 'afterRender']),
-      measure: new Phase('measure', ['measure', 'affect', 'destroy']),
+      animation: new Phase('animation', ['measure', 'affect', 'destroy']),
       idle: new Phase('idle', ['high', 'low'])
     };
     this._mapQueueToPhase = {
       actions: phases.event,
-      affect: phases.measure,
+      affect: phases.animation,
       afterRender: phases.layout, // backburner legacy, deprecated
       beforeRender: phases.layout,
-      measure: phases.measure,
-      destroy: phases.measure, // backburner legacy, deprecated
+      measure: phases.animation,
+      destroy: phases.animation, // backburner legacy, deprecated
       render: phases.layout,
       sync: phases.event,
       high: phases.idle,
@@ -58,6 +58,12 @@ export default class Engine {
   }
 
   destroyBuffer(buffer) {
+    let index = this._buffers.indexOf(buffer);
+
+    if (index !== -1) {
+      this._buffers.splice(index, 1);
+    }
+
     /*
       unhook and forget the buffer here.
       this should be called by buffer.destroy();
@@ -80,7 +86,7 @@ export default class Engine {
   clear() {
     this.phases.event.clear();
     this.phases.layout.clear();
-    this.phases.measure.clear();
+    this.phases.animation.clear();
     this.phases.idle.clear();
     this.jobCount = 0;
   }
@@ -91,7 +97,7 @@ export default class Engine {
     while (this.jobCount) {
       this.jobCount -= this.phases.event.flush();
       this.jobCount -= this.phases.layout.flush();
-      this.jobCount -= this.phases.measure.flush();
+      this.jobCount -= this.phases.animation.flush();
       this.jobCount -= this.phases.idle.flush();
     }
   }
@@ -99,6 +105,23 @@ export default class Engine {
   schedule(name, job) {
     assert(`You must supply a name to igniter.schedule`, name && typeof name === 'string');
     assert(`You must supply a job to igniter.schedule`, job && typeof job === 'function');
+
+    conditionalDeprecation(
+      `The legacy backburner queue 'destroy' has been deprecated. Use 'cleanup' or one of the Idle Phase queues instead.`,
+      {
+        id: 'igniter.legacy-backburner.destroy',
+        since: '0.0.0',
+        until: '2.0.0'
+      },
+      name !== 'destroy');
+    conditionalDeprecation(
+      `The legacy backburner queue 'afterRender' has been deprecated. Use 'cleanup' or one of the Idle Phase queues instead.`,
+      {
+        id: 'igniter.legacy-backburner.afterRender',
+        since: '0.0.0',
+        until: '2.0.0'
+      },
+      name !== 'afterRender');
 
     this.jobCount++;
     let phase = this._mapQueueToPhase[name];
@@ -147,7 +170,7 @@ export default class Engine {
     this.nextFrameTick = this.scheduleFrameTask(
       () => {
         this.phases.layout.flush();
-        this.phases.measure.flush();
+        this.phases.animation.flush();
         this._tickFrame();
       }
     );
