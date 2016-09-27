@@ -1,4 +1,4 @@
-import { stripInProduction } from '../developer-ergonomics';
+import { stripInProduction } from 'igniter/-debug';
 import Promise from '../promise';
 
 export function createWrappedTask(job, token) {

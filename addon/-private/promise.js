@@ -1,5 +1,5 @@
 import RSVP from 'rsvp';
-import { stripInProduction } from './developer-ergonomics';
+import { stripInProduction } from 'igniter/-debug';
 
 const { Promise: RSVPromise } = RSVP;
 let PromiseClass = RSVPromise;

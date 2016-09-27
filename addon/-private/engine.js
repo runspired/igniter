@@ -12,7 +12,7 @@ import {
   setMicroTask,
   clearMicroTask
 } from '../microtask-manager';
-import { assert } from './developer-ergonomics';
+import { assert } from 'igniter/-debug';
 
 export default class Engine {
   constructor() {
