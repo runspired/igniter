@@ -1,33 +1,56 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Dummy Tests</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+  <meta charset="utf-8">
+  <title>Igniter Test Suite</title>
+  <link rel="stylesheet" href="qunit.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture"></div>
+  <script src="qunit.js"></script>
+  <script src="/testem.js"></script>
+  <script src="../assets/loader.js"></script>
+  <script>loader.noConflict({ define: 'enifed' });</script>
+  <!--<script src="export-test-results.js"></script>-->
+  <script src="/amd/igniter-runtime.amd.js"></script>
+  <script src="/amd/igniter-tests.amd.js"></script>
+  <script src="/amd/tests.amd.js"></script>
 
-    {{content-for "head"}}
-    {{content-for "test-head"}}
+  <style>
+    #qunit-tests.hidepass li.skipped {
+      display: none;
+    }
+  </style>
 
-    <link rel="stylesheet" href="{{rootURL}}assets/vendor.css">
-    <link rel="stylesheet" href="{{rootURL}}assets/dummy.css">
-    <link rel="stylesheet" href="{{rootURL}}assets/test-support.css">
+  <script>
+    QUnit.config.urlConfig.push({ id: 'nojshint', label: "No JSHint"});
 
-    {{content-for "head-footer"}}
-    {{content-for "test-head-footer"}}
-  </head>
-  <body>
-    {{content-for "body"}}
-    {{content-for "test-body"}}
+    function getPackagesToTest() {
+      if (QUnit.urlParams.packages) {
+        return QUnit.urlParams.packages.split(',');
+      }
+    }
 
-    <script src="{{rootURL}}testem.js" integrity=""></script>
-    <script src="{{rootURL}}assets/vendor.js"></script>
-    <script src="{{rootURL}}assets/test-support.js"></script>
-    <script src="{{rootURL}}assets/dummy.js"></script>
-    <script src="{{rootURL}}assets/tests.js"></script>
+    // Recursively merge all the dependencies for this configuration of
+    // packages to ensure that we only inject each dependency once.
+    // Testing dependencies are only injected for the packages being tested.
+    var packagesToTest = getPackagesToTest();
+  </script>
 
-    {{content-for "body-footer"}}
-    {{content-for "test-body-footer"}}
-  </body>
+  <script>
+    var testMatch;
+    if (packagesToTest) {
+      testMatch = new RegExp("^(" + packagesToTest.join("|") + ").*(-test|.tslint)$");
+    } else {
+      testMatch = /(\-test|.tslint)$/;
+    }
+
+    Object.keys(requireModule.entries).forEach(function(entry) {
+      if (entry.match(testMatch)) {
+        requireModule(entry)
+      };
+    });
+  </script>
+</body>
 </html>
