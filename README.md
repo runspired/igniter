@@ -135,16 +135,16 @@ Idle is ideal for work that will result in a major GC event (such as
 emptying a large array / releasing a large DOM tree), or is expensive
  but has low priority.
  
- 
+
 ```
-high => low
+idleHigh => idleLow
 ```
 
 Idle is the only phase without a `cleanup` queue.
 
 Idle is similar in nature to using `requestIdleCallback`.  All work
-present in the `high` queue will be completed before the `low` queue
-unless the deadline for that work has passed.
+present in the `idleHigh` queue will be completed before the `idleLow`
+queue unless the deadline for that work has passed.
 
 Unlike other phases, Idle does not flush all of its jobs at once, but
 instead yields back to Igniter if any other work is scheduled or if

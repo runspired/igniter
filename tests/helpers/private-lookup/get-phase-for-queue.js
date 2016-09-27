@@ -19,7 +19,11 @@ export default function getPhaseForQueue(instance, queueName) {
   let phase;
 
   try {
-    phase = instance.engine._mapQueueToPhase[queueName];
+    if (queueName === 'cleanup') {
+      phase = instance.engine.currentPhase || instance.engine.phases.event;
+    } else {
+      phase = instance.engine._mapQueueToPhase[queueName];
+    }
   } catch (e) {
     throw new Error(`Test helper 'getPhaseForQueue' could not locate Igniter's queue map. This may indicate an API change to private internals.`);
   }

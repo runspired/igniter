@@ -17,11 +17,12 @@ import { assert, conditionalDeprecation } from 'igniter/-debug';
 export default class Engine {
   constructor() {
     let phases = this.phases = {
-      event: new Phase('event', ['sync', 'actions']),
-      layout: new Phase('layout', ['beforeRender', 'render', 'afterRender']),
-      animation: new Phase('animation', ['measure', 'affect', 'destroy']),
-      idle: new Phase('idle', ['high', 'low'])
+      event: new Phase('event', ['sync', 'actions', 'cleanup']),
+      layout: new Phase('layout', ['beforeRender', 'render', 'afterRender', 'cleanup']),
+      animation: new Phase('animation', ['measure', 'affect', 'destroy', 'cleanup']),
+      idle: new Phase('idle', ['idleHigh', 'idleLow'])
     };
+    this.currentPhase = null;
     this._mapQueueToPhase = {
       actions: phases.event,
       affect: phases.animation,
@@ -31,8 +32,8 @@ export default class Engine {
       destroy: phases.animation, // backburner legacy, deprecated
       render: phases.layout,
       sync: phases.event,
-      high: phases.idle,
-      low: phases.idle
+      idleHigh: phases.idle,
+      idleLow: phases.idle
     };
     this.nextMicroTick = undefined;
     this.nextFrameTick = undefined;
@@ -124,7 +125,12 @@ export default class Engine {
       name !== 'afterRender');
 
     this.jobCount++;
-    let phase = this._mapQueueToPhase[name];
+    let phase;
+    if (name === 'cleanup') {
+      phase = this.currentPhase || this.phases.event;
+    } else {
+      phase = this._mapQueueToPhase[name];
+    }
 
     assert(`You scheduled a job into ${name} but this queue does not exist!`, phase);
 
@@ -157,7 +163,9 @@ export default class Engine {
   _scheduleEventFlush() {
     if (!this.nextMicroTick) {
       this.nextMicroTick = this.scheduleMicroTask(() => {
+        this.currentPhase = this.phases.event;
         this.phases.event.flush();
+        this.currentPhase = null;
         this.nextMicroTick = undefined;
       });
     }
@@ -169,8 +177,11 @@ export default class Engine {
     }
     this.nextFrameTick = this.scheduleFrameTask(
       () => {
+        this.currentPhase = this.phases.layout;
         this.phases.layout.flush();
+        this.currentPhase = this.phases.animation;
         this.phases.animation.flush();
+        this.currentPhase = null;
         this._tickFrame();
       }
     );
