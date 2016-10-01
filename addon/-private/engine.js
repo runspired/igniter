@@ -14,6 +14,9 @@ import {
 } from '../microtask-manager';
 import { assert, conditionalDeprecation } from 'igniter/-debug';
 
+import { stripInProduction } from 'igniter/-debug';
+import Promise from './promise';
+
 export default class Engine {
   constructor() {
     let phases = this.phases = {
@@ -22,7 +25,20 @@ export default class Engine {
       animation: new Phase('animation', ['measure', 'affect', 'destroy', 'cleanup']),
       idle: new Phase('idle', ['idleHigh', 'idleLow'])
     };
+
     this.currentPhase = null;
+
+    // In development, tasks are wrapped in promises and will run after this
+    // flush finishes. So we schedule changing the current phase with promises
+    // as well.
+    stripInProduction(() => {
+      this.setCurrentPhase = (phase) => {
+        Promise.resolve().then(() => {
+          this.currentPhase = phase;
+        });
+      };
+    });
+
     this._mapQueueToPhase = {
       actions: phases.event,
       affect: phases.animation,
@@ -136,6 +152,8 @@ export default class Engine {
 
     if (phase.name === 'event') {
       this._scheduleEventFlush();
+    } else if (phase.name === 'idle') {
+      this._scheduleIdleFlush();
     }
 
     return phase.push(name, job);
@@ -163,10 +181,27 @@ export default class Engine {
   _scheduleEventFlush() {
     if (!this.nextMicroTick) {
       this.nextMicroTick = this.scheduleMicroTask(() => {
-        this.currentPhase = this.phases.event;
-        this.phases.event.flush();
-        this.currentPhase = null;
+        // In production, we will be executing all tasks immediately and a task
+        // may schedule the next event flush which will set the next MicroTick.
+        // In development this won't happen, because tasks are wrapped in promises.
+        // Either way, we want to unset the nextMicroTick handler first.
         this.nextMicroTick = undefined;
+
+        this.setCurrentPhase(this.phases.event);
+        this.phases.event.flush();
+        this.setCurrentPhase(null);
+      });
+    }
+  }
+
+  _scheduleIdleFlush() {
+    if (!this.nextIdleTick) {
+      this.nextIdleTick = this.scheduleIdleTask(() => {
+        this.nextIdleTick = undefined;
+
+        this.setCurrentPhase(this.phases.idle);
+        this.phases.idle.flush();
+        this.setCurrentPhase(null);
       });
     }
   }
@@ -177,14 +212,19 @@ export default class Engine {
     }
     this.nextFrameTick = this.scheduleFrameTask(
       () => {
-        this.currentPhase = this.phases.layout;
+        this.setCurrentPhase(this.phases.layout);
         this.phases.layout.flush();
-        this.currentPhase = this.phases.animation;
+        this.setCurrentPhase(this.phases.animation);
         this.phases.animation.flush();
-        this.currentPhase = null;
+        this.setCurrentPhase(null);
+
         this._tickFrame();
       }
     );
+  }
+
+  setCurrentPhase(phase) {
+    this.currentPhase = phase;
   }
 
   /*

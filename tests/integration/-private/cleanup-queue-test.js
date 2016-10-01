@@ -67,11 +67,11 @@ test(`The Layout Phase has it's own cleanup queue.`, function(assert) {
 });
 
 test(`The Animation Phase has it's own cleanup queue.`, function(assert) {
-  let advanceTest = assert.async(3);
+  let advanceTest = assert.async(1);
   let animationPhase  = getPhase(igniter, 'animation');
   let cleanupQueue = getQueueInPhase(animationPhase, 'cleanup');
 
-  assert.expect(2);
+  assert.expect(3);
   assert.equal(cleanupQueue.length, 0, 'The cleanup queue is initially empty');
 
   igniter.schedule('measure', function() {
