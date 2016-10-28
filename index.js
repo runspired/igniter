@@ -39,7 +39,6 @@ module.exports = {
             'debug',
             'instrument',
             'deprecate',
-            'stripInProduction',
             'developModeOnly',
             'conditionalDeprecation'
           ]

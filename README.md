@@ -23,7 +23,7 @@ directly, via a `Timer`, or indirectly via a `Buffer`.
 ## Primary Use
 
 ```js
-import Igniter from 'igniter-core';
+import { Igniter } from 'igniter-runtime';
 
 const igniter = new Igniter();
 
@@ -51,7 +51,7 @@ Buffers are ideal for deferring scheduling of work until some primary
 task is complete.
 
 ```js
-import Igniter from 'igniter-core';
+import { Igniter } from 'igniter-runtime';
 
 const igniter = new Igniter();
 const buffer = igniter.buffer(function(deadline, isAboutToRender) {
