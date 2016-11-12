@@ -2,13 +2,14 @@ import EmptyObject from './empty-object';
 import { UNDEFINED_KEY } from './-constants';
 
 export default class HashMap {
+  private _data: Object;
 
-  constructor(entries) {
+  constructor(entries?: Array<any>) {
     this._data = new EmptyObject();
 
     if (entries) {
       for (let i = 0; i < entries.length; i++) {
-        this.data[entries[i][0]] = entries[i][1];
+        this._data[entries[i][0]] = entries[i][1];
       }
     }
   }

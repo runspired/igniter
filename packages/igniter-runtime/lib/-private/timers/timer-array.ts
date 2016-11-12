@@ -2,11 +2,13 @@ const { now } = Date;
 export const MACRO_TASK_EXECUTION_ADJUSTMENT = 3;
 
 export default class TimerArray {
+  data: Array<any>;
+
   constructor() {
     this.data = [];
   }
 
-  push(executeAt, job) {
+  push(executeAt, job): void {
     this.data.push(executeAt, job);
   }
 
@@ -35,7 +37,7 @@ export default class TimerArray {
    }
    ```
    */
-  search(time) {
+  search(time): number {
     let timers = this.data;
     let start = 0;
     let end = timers.length - 2;
@@ -60,7 +62,7 @@ export default class TimerArray {
     return (time >= timers[start]) ? start + 2 : start;
   }
 
-  insert(time, job) {
+  insert(time, job): number {
     let arr = this.data;
     let insertionIndex = this.search(time);
 
@@ -69,7 +71,7 @@ export default class TimerArray {
     return insertionIndex;
   }
 
-  flushExpired() {
+  flushExpired(): void {
     let time = now() + MACRO_TASK_EXECUTION_ADJUSTMENT;
     let timers = this.data;
     let i = 0;

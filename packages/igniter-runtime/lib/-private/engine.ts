@@ -1,10 +1,7 @@
 import Phase from './phase';
-import Buffer from './buffer';
 import {
   requestAnimationFrame,
   cancelAnimationFrame,
-  requestIdleCallback,
-  cancelIdleCallback,
   setTimeout,
   clearTimeout
 } from '../-globals';
@@ -12,105 +9,83 @@ import {
   setMicroTask,
   clearMicroTask
 } from '../microtask-manager';
+
+import Token from 'cancellation-token';
+
 import { assert, conditionalDeprecation } from 'igniter-debug';
 
 export default class Engine {
+  private phases: any;
+  private _mapQueueToPhase: any;
+  private currentPhase: Phase;
+
+  private nextMicroTick: number;
+  private nextFrameTick: number;
+
+  private isRunning: boolean;
+  private jobCount: number;
+
   constructor() {
-    let phases = this.phases = {
+    this.phases = {
       event: new Phase('event', ['sync', 'actions', 'cleanup']),
       layout: new Phase('layout', ['beforeRender', 'render', 'afterRender', 'cleanup']),
-      animation: new Phase('animation', ['measure', 'affect', 'destroy', 'cleanup']),
-      idle: new Phase('idle', ['idleHigh', 'idleLow'])
+      animation: new Phase('animation', ['measure', 'affect', 'destroy', 'cleanup'])
     };
 
     this.currentPhase = null;
 
     this._mapQueueToPhase = {
-      actions: phases.event,
-      affect: phases.animation,
-      afterRender: phases.layout, // backburner legacy, deprecated
-      beforeRender: phases.layout,
-      measure: phases.animation,
-      destroy: phases.animation, // backburner legacy, deprecated
-      render: phases.layout,
-      sync: phases.event,
-      idleHigh: phases.idle,
-      idleLow: phases.idle
+      actions: this.phases.event,
+      affect: this.phases.animation,
+      afterRender: this.phases.layout, // backburner legacy, deprecated
+      beforeRender: this.phases.layout,
+      measure: this.phases.animation,
+      destroy: this.phases.animation, // backburner legacy, deprecated
+      render: this.phases.layout,
+      sync: this.phases.event
     };
     this.nextMicroTick = undefined;
     this.nextFrameTick = undefined;
-    this.nextIdleTick = undefined;
     this.isRunning = false;
     this.jobCount = 0;
-
-    this._buffers = [];
 
     this.start();
   }
 
-  createBuffer(fn, opts) {
-    let buffer = new Buffer(fn, opts);
-    this._buffers.push(buffer);
-
-    /*
-      This should setup a hook for the parent to call into the buffer before render
-      if required. This hook should happen pre beforeRender.
-     */
-
-    return buffer;
-  }
-
-  destroyBuffer(buffer) {
-    let index = this._buffers.indexOf(buffer);
-
-    if (index !== -1) {
-      this._buffers.splice(index, 1);
-    }
-
-    /*
-      unhook and forget the buffer here.
-      this should be called by buffer.destroy();
-     */
-  }
-
-  start() {
+  start(): void {
     this.isRunning = true;
     this._tickFrame();
   }
 
-  stop() {
+  stop(): void {
     this.isRunning = false;
     this.cancelFrameTask(this.nextFrameTick);
     this.cancelMicroTask(this.nextMicroTick);
-    this.cancelIdleTask(this.nextIdleTick);
     this.nextFrameTick = null;
   }
 
-  clear() {
+  clear(): void {
     this.phases.event.clear();
     this.phases.layout.clear();
     this.phases.animation.clear();
-    this.phases.idle.clear();
     this.jobCount = 0;
   }
 
-  fastFinish() {
+  fastFinish(): void {
     this.cancelMicroTask(this.nextMicroTick);
-    this.cancelIdleTask(this.nextIdleTick);
     while (this.jobCount) {
       this.jobCount -= this.phases.event.flush();
       this.jobCount -= this.phases.layout.flush();
       this.jobCount -= this.phases.animation.flush();
-      this.jobCount -= this.phases.idle.flush();
     }
   }
 
-  schedule(name, job) {
+  schedule(name, job): Token {
     assert(`You must supply a name to igniter.schedule`, name && typeof name === 'string');
     assert(`You must supply a job to igniter.schedule`, job && typeof job === 'function');
 
     conditionalDeprecation(
-      `The legacy backburner queue 'destroy' has been deprecated. Use 'cleanup' or one of the Idle Phase queues instead.`,
+      `The legacy backburner queue 'destroy' has been deprecated. Use 'cleanup' instead.`,
       {
         id: 'igniter.legacy-backburner.destroy',
         since: '0.0.0',
@@ -118,7 +93,7 @@ export default class Engine {
       },
       name !== 'destroy');
     conditionalDeprecation(
-      `The legacy backburner queue 'afterRender' has been deprecated. Use 'cleanup' or one of the Idle Phase queues instead.`,
+      `The legacy backburner queue 'afterRender' has been deprecated. Use 'cleanup' instead.`,
       {
         id: 'igniter.legacy-backburner.afterRender',
         since: '0.0.0',
@@ -138,33 +113,22 @@ export default class Engine {
 
     if (phase.name === 'event') {
       this._scheduleEventFlush();
-    } else if (phase.name === 'idle') {
-      this._scheduleIdleFlush();
     }
 
     return phase.push(name, job);
   }
 
-  scheduleOnce(name, target, method, args) {
-    let key = target || method;
-    let task = this.phases[name].nonces.get(key);
-
-    if (task) {
-      // stitch old task resolution to new task value?
-      task.args[2] = args;
-    }
-
-    task = this.schedule(name, target, method, args);
-    this.phases[name].nonces.set(key, task);
-
-    return task;
+  scheduleOnce(name, job): Token {
+    // To be implemented
+    return new Token();
   }
 
-  scheduleNext() {
-    throw new Error('Next has not been implemented');
+  scheduleNext(job): Token {
+    // To be implemented
+    return new Token();
   }
 
-  _scheduleEventFlush() {
+  _scheduleEventFlush(): void {
     if (!this.nextMicroTick) {
       this.nextMicroTick = this.scheduleMicroTask(() => {
         // In production, we will be executing all tasks immediately and a task
@@ -180,19 +144,7 @@ export default class Engine {
     }
   }
 
-  _scheduleIdleFlush() {
-    if (!this.nextIdleTick) {
-      this.nextIdleTick = this.scheduleIdleTask(() => {
-        this.nextIdleTick = undefined;
-
-        this.setCurrentPhase(this.phases.idle);
-        this.phases.idle.flush();
-        this.setCurrentPhase(null);
-      });
-    }
-  }
-
-  _tickFrame() {
+  _tickFrame(): void {
     if (this.isRunning === false) {
       return;
     }
@@ -209,7 +161,7 @@ export default class Engine {
     );
   }
 
-  setCurrentPhase(phase) {
+  setCurrentPhase(phase): void {
     this.currentPhase = phase;
   }
 
@@ -218,7 +170,7 @@ export default class Engine {
    This is not recommended use now that the event queue is flushed via microtask
    and can flush repeatedly prior to render.
    */
-  addQueue({ frame = 'event', name, after }) {
+  addQueue({ frame = 'event', name }, after): void {
     this.phases[frame].addQueue(name, after);
     this._mapQueueToPhase[name] = this.phases[frame];
   }
@@ -229,39 +181,31 @@ export default class Engine {
    queues are unavailable, we sandbox our usage in a
    pluggable pattern.
    */
-  scheduleFrameTask(cb) {
+  scheduleFrameTask(cb): number {
     return requestAnimationFrame(cb);
   }
 
-  cancelFrameTask(id) {
+  cancelFrameTask(id): void {
     cancelAnimationFrame(id);
   }
 
-  scheduleMacroTask(cb, time) {
+  scheduleMacroTask(cb, time): number {
     return setTimeout(cb, time);
   }
 
-  cancelMacroTask(id) {
+  cancelMacroTask(id): void {
     clearTimeout(id);
   }
 
-  scheduleIdleTask(cb, opts) {
-    return requestIdleCallback(cb, opts);
-  }
-
-  cancelIdleTask(id) {
-    cancelIdleCallback(id);
-  }
-
-  scheduleMicroTask(cb) {
+  scheduleMicroTask(cb): any {
     return setMicroTask(cb);
   }
 
-  cancelMicroTask(id) {
+  cancelMicroTask(id): any {
     return clearMicroTask(id);
   }
 
-  destroy() {
+  destroy(): void {
     this.stop();
     this.clear();
     this.phases = null;

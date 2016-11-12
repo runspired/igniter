@@ -1,6 +1,11 @@
 import { UNDEFINED_KEY, SMALL_ARRAY_LENGTH } from './-constants';
 
 export default class FastArray {
+  name: string;
+  length: number;
+  _length: number;
+  _data: Array<any>;
+
   constructor(length = SMALL_ARRAY_LENGTH, name = 'Unknown Pool') {
     this.init(length, name);
   }

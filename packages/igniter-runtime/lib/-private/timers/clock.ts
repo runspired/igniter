@@ -1,8 +1,9 @@
 /* global Math */
 import { setTimeout, clearTimeout } from '../../-globals';
 import TimerArray from './timer-array';
-import Token from '../tokens';
 const { now } = Date;
+
+import Token from 'cancellation-token';
 
 function wrapForTimer(work, token) {
   return function checkForCancelled() {
@@ -13,6 +14,10 @@ function wrapForTimer(work, token) {
 }
 
 export class Clock {
+  timers: TimerArray;
+  boundFlush: any;
+  nextMacroTask: number;
+
   constructor() {
     this.timers = new TimerArray();
     this.boundFlush = this._flush.bind(this);
@@ -38,7 +43,7 @@ export class Clock {
     let job = wrapForTimer(work, token);
 
     // push a new timeout if we don't have one
-    if (this.timers.length === 0) {
+    if (this.timers.data.length === 0) {
       this.timers.push(executeAt, job);
       this.nextMacroTask = setTimeout(this.boundFlush, wait);
       return token;
@@ -56,7 +61,7 @@ export class Clock {
   }
 
   forget(token) {
-    token.cancelled = true;
+    token.cancel();
   }
 
   /*
@@ -78,8 +83,8 @@ export class Clock {
   _flush() {
     this.timers.flushExpired();
 
-    if (this.timers.length > 0) {
-      let [executeAt] = this.timers;
+    if (this.timers.data.length > 0) {
+      let [executeAt] = this.timers.data;
       let wait = Math.max(0, executeAt - now());
 
       this.nextMacroTask = setTimeout(this.boundFlush, wait);
