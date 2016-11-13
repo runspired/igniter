@@ -1,9 +1,14 @@
 import HashMap from '../perf-primitives/hash-map';
 import FastArray from '../perf-primitives/fast-array';
 import { createWrappedTask } from './task';
-import Token from './tokens';
+import Token from 'cancellation-token';
 
 export default class Phase {
+  name: string;
+  queueNames: Array<string>;
+  queues: HashMap;
+  nonces: HashMap;
+
   constructor(name, queueNames) {
     this.name = name;
     this.queueNames = queueNames;
@@ -15,7 +20,7 @@ export default class Phase {
     }
   }
 
-  addQueue(name, after) {
+  addQueue(name, after): void {
     if (this.queueNames.indexOf(name) !== -1) {
       return;
     }
@@ -31,7 +36,7 @@ export default class Phase {
     this.queues.set(name, new FastArray());
   }
 
-  push(name, job) {
+  push(name, job): Token {
     let token = new Token();
     let work = createWrappedTask(job, token);
     this.queues.get(name).push(work);
@@ -39,7 +44,7 @@ export default class Phase {
     return token;
   }
 
-  flush() {
+  flush(): number {
     let jobs = 0;
     this.queueNames.forEach((queueName) => {
       let queue = this.queues.get(queueName);
@@ -51,13 +56,13 @@ export default class Phase {
     return jobs;
   }
 
-  clear() {
+  clear(): void {
     this.queues.forEach((queue) => {
       queue.emptyEach(() => {});
     });
   }
 
-  destroy() {
+  destroy(): void {
     this.clear();
     this.queues = null;
     this.nonces = null;

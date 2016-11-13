@@ -80,6 +80,9 @@ module.exports = function(_options) {
   /*
    * ES6 Build
    */
+  var cancellationTokenPath = path.dirname(require.resolve('cancellation-token'));
+  var cancellationToken = mv(cancellationTokenPath, 'cancellation-token');
+
   var tsTree = find(packages, {
     include: ['**/*.ts'],
     exclude: ['**/*.d.ts']
@@ -96,6 +99,8 @@ module.exports = function(_options) {
   var libTree = find(jsTree, {
     include: ['*/index.js', '*/lib/**/*.js']
   });
+
+  libTree = merge([libTree, cancellationToken]);
 
   var es6LibTree = mv(libTree, 'es6');
 
@@ -115,6 +120,14 @@ module.exports = function(_options) {
 
   var cjsTree = typescript(tsTree, tsOptions);
 
+  // CancellationToken ships as ES6, so we have to compile it from ES6 modules to
+  // CJS using TypeScript. broccoli-typescript-compiler only works with `.ts` files,
+  // so we rename the `.js` files to `.ts` first.
+  var cancellationTokenLib = rename(cancellationTokenPath, '.js', '.ts');
+  var cancellationTokenJSTree = typescript(cancellationTokenLib, tsOptions);
+
+  cjsTree = merge([cjsTree, cancellationTokenJSTree]);
+
   // igniter packages require other igniter packages using non-relative module names
   // (e.g., `igniter-test-helpers` may import `igniter-runtime` instead of `../igniter-test-helpers`),
   // which doesn't work with Node's module resolution strategy.
@@ -126,7 +139,11 @@ module.exports = function(_options) {
    * Anonymous AMD Build
    */
   var igniterRuntime = find(libTree, {
-    include: ['igniter-runtime/**/*', 'igniter-debug/**/*']
+    include: [
+      'igniter-runtime/**/*',
+      'igniter-debug/**/*',
+      'cancellation-token/**/*'
+    ]
   });
 
   var igniterDemos = merge([

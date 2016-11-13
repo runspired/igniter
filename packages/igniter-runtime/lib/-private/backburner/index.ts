@@ -1,4 +1,6 @@
+import Engine from '../engine';
 import clock from '../timers/clock';
+import Token from 'cancellation-token';
 
 import {
   isFunction,
@@ -8,20 +10,23 @@ import {
 } from './utils';
 
 export default class Backburner {
-  constructor(engine) {
+  private engine: Engine;
+  private _choked: Array<any>;
+
+  constructor(engine: Engine) {
     this.engine = engine;
     this._choked = [];
   }
 
-  throttle(...args) {
-    return this._choke(false, ...args);
+  throttle(target, method, ...args): Token {
+    return this._choke(false, target, method, ...args);
   }
 
-  debounce(...args) {
-    return this._choke(true, ...args);
+  debounce(target, method, ...args): Token {
+    return this._choke(true, target, method, ...args);
   }
 
-  _choke(updateExpireTime, target, method, ...args) {
+  _choke(updateExpireTime, target, method, ...args): Token {
     let immediate = false;
     let wait = args.pop();
     let index;
@@ -54,7 +59,7 @@ export default class Backburner {
     if (immediate && index === -1) {
       let job = Backburner.buildFunctionCall(target, method);
 
-      this.engine.schedule('actions', job, ...args);
+      this.engine.schedule('actions', job);
     }
 
     reference = [
@@ -68,7 +73,7 @@ export default class Backburner {
     return timer;
   }
 
-  static buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore) {
+  static buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore): [any, any] {
     let target;
     let method;
     let ignoreArg;
@@ -106,7 +111,7 @@ export default class Backburner {
     ];
   }
 
-  static buildWrappedFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore, engine) {
+  static buildWrappedFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore, engine): [any, any] {
     let [method, ignoreArg] = Backburner.buildFunctionCall(potentialTargetOrMethod, potentialMethodOrIgnore);
     let fn = (...args) => {
       engine.schedule('actions', method, ...args);
@@ -115,7 +120,7 @@ export default class Backburner {
     return [fn, ignoreArg];
   }
 
-  later(...args) {
+  later(...args): Token {
     let { length } = args;
     let method;
     let wait;
@@ -162,13 +167,13 @@ export default class Backburner {
     return clock.schedule(method, wait, ...args);
   }
 
-  destroy() {
+  destroy(): void {
     this.engine = null;
     this._choked = null;
   }
 }
 
-function executeChokedFunction(backburner, immediate, target, method, ...args) {
+function executeChokedFunction(backburner, immediate, target, method, ...args): void {
   if (!immediate) {
     let job = Backburner.buildFunctionCall(target, method);
 
@@ -182,7 +187,7 @@ function executeChokedFunction(backburner, immediate, target, method, ...args) {
   }
 }
 
-function findItem(target, method, collection) {
+function findItem(target, method, collection): number {
   let item;
   let index = -1;
 

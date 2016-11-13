@@ -4,12 +4,15 @@ import Promise from './-private/promise';
 function K() {}
 
 export class MicroTaskManager {
+  _nextFlush: Promise;
+  _jobs: FastArray;
+
   constructor() {
     this._nextFlush = undefined;
     this._jobs = new FastArray();
   }
 
-  schedule(job) {
+  schedule(job): any {
     if (this._nextFlush === undefined) {
       this._scheduleFlush();
     }
@@ -17,14 +20,14 @@ export class MicroTaskManager {
     return this._jobs.push(job);
   }
 
-  _scheduleFlush() {
+  _scheduleFlush(): void {
     this._nextFlush = Promise.resolve()
       .then(() => {
         this._flush();
       });
   }
 
-  _flush() {
+  _flush(): void {
     this._jobs.emptyEach((job) => {
       job.call(undefined);
     });
@@ -32,7 +35,7 @@ export class MicroTaskManager {
     this._nextFlush = undefined;
   }
 
-  cancel(id) {
+  cancel(id): void {
     this._jobs.set(id, K);
   }
 }
